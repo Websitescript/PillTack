@@ -11,10 +11,23 @@ android {
         applicationId = "com.pilltack.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Must increase on every build for Android to accept it as an update. CI run number does that automatically.
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1) + 1
+        versionName = "1.1"
     }
-    buildTypes { release { isMinifyEnabled = false } }
+    // Same key on every build => each new APK installs as an update and keeps your data.
+    signingConfigs {
+        create("pilltack") {
+            storeFile = file("pilltack.jks")
+            storePassword = "pilltack123"
+            keyAlias = "pilltack"
+            keyPassword = "pilltack123"
+        }
+    }
+    buildTypes {
+        getByName("debug") { signingConfig = signingConfigs.getByName("pilltack") }
+        release { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("pilltack") }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }

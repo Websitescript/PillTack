@@ -1,6 +1,8 @@
 package com.pilltack.app.data
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "medicines")
@@ -15,8 +17,9 @@ data class Medicine(
     val colorRight: Int,
     val colorBg: Int,
     val notes: String = "",
-    val scheduleType: String = "DAILY",   // DAILY, WEEKDAYS, DATES, AS_NEEDED
+    val scheduleType: String = "DAILY",   // DAILY, WEEKDAYS, INTERVAL, DATES, AS_NEEDED
     val weekdays: Int = 0,                // bit0 = Monday ... bit6 = Sunday
+    @ColumnInfo(defaultValue = "2") val intervalDays: Int = 2,            // INTERVAL: every N days counted from startDate (2 = alternate days)
     val dates: String = "",               // csv of epoch days
     val times: String = "08:00",          // csv of HH:mm
     val doseAmount: Int = 1,
@@ -66,8 +69,15 @@ interface DoseDao {
     @Query("DELETE FROM doses") suspend fun clear()
 }
 
-@Database(entities = [Medicine::class, Dose::class], version = 1, exportSchema = false)
+@Database(entities = [Medicine::class, Dose::class], version = 2, exportSchema = false)
 abstract class AppDb : RoomDatabase() {
     abstract fun meds(): MedicineDao
     abstract fun doses(): DoseDao
+}
+
+/** v1 -> v2: adds the "every N days" column. Existing medicines and history are kept. */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE medicines ADD COLUMN intervalDays INTEGER NOT NULL DEFAULT 2")
+    }
 }

@@ -25,6 +25,7 @@ object ScheduleLogic {
         return when (m.scheduleType) {
             "DAILY" -> true
             "WEEKDAYS" -> ((m.weekdays shr (d.dayOfWeek.value - 1)) and 1) == 1
+            "INTERVAL" -> (d.toEpochDay() - m.startDate) % maxOf(m.intervalDays, 1) == 0L
             "DATES" -> dates(m).contains(d.toEpochDay())
             else -> false
         }

@@ -40,6 +40,7 @@ class Draft {
     var cB by mutableIntStateOf(0xFFF5A623.toInt())
     var sched by mutableStateOf("DAILY")
     var weekdays by mutableIntStateOf(0)
+    var interval by mutableStateOf("2")
     val dates = mutableStateListOf<Long>()
     val times = mutableStateListOf("08:00")
     var dose by mutableIntStateOf(1)
@@ -57,7 +58,7 @@ class Draft {
         id = id, name = name.trim(),
         form = if (form == "Other" && customForm.isNotBlank()) customForm.trim() else form,
         strength = strength.trim(), unit = unit, shape = shape, colorLeft = cL, colorRight = cR, colorBg = cB,
-        notes = notes.trim(), scheduleType = sched, weekdays = weekdays,
+        notes = notes.trim(), scheduleType = sched, weekdays = weekdays, intervalDays = (interval.toIntOrNull() ?: 2).coerceAtLeast(2),
         dates = dates.sorted().joinToString(","), times = times.distinct().sorted().joinToString(","),
         doseAmount = dose,
         startDate = if (sched == "DATES") (dates.minOrNull() ?: start) else start,
@@ -71,10 +72,11 @@ class Draft {
         name.isBlank() -> 0 to "Enter the medicine name"
         sched == "WEEKDAYS" && weekdays == 0 -> 5 to "Select at least one weekday"
         sched == "DATES" && dates.isEmpty() -> 5 to "Select at least one date"
+        sched == "INTERVAL" && (interval.toIntOrNull() ?: 0) < 2 -> 5 to "Enter 2 or more days (2 = every other day)"
         sched != "AS_NEEDED" && times.isEmpty() -> 6 to "Add at least one reminder time"
-        (sched == "DAILY" || sched == "WEEKDAYS") && durType == "DAYS" && (days.toIntOrNull() ?: 0) < 1 -> 7 to "Enter the number of days"
-        (sched == "DAILY" || sched == "WEEKDAYS") && durType == "DOSES" && (doses.toIntOrNull() ?: 0) < 1 -> 7 to "Enter the number of doses"
-        (sched == "DAILY" || sched == "WEEKDAYS") && durType == "END_DATE" && end < start -> 7 to "End date must not be before the start date"
+        (sched == "DAILY" || sched == "WEEKDAYS" || sched == "INTERVAL") && durType == "DAYS" && (days.toIntOrNull() ?: 0) < 1 -> 7 to "Enter the number of days"
+        (sched == "DAILY" || sched == "WEEKDAYS" || sched == "INTERVAL") && durType == "DOSES" && (doses.toIntOrNull() ?: 0) < 1 -> 7 to "Enter the number of doses"
+        (sched == "DAILY" || sched == "WEEKDAYS" || sched == "INTERVAL") && durType == "END_DATE" && end < start -> 7 to "End date must not be before the start date"
         else -> null
     }
 
@@ -84,7 +86,7 @@ class Draft {
             val common = listOf("Capsule", "Tablet", "Liquid", "Topical", "Cream", "Drops", "Inhaler", "Injection", "Syrup")
             if (m.form in common) form = m.form else { form = "Other"; customForm = m.form }
             cL = m.colorLeft; cR = m.colorRight; cB = m.colorBg
-            sched = m.scheduleType; weekdays = m.weekdays
+            sched = m.scheduleType; weekdays = m.weekdays; interval = m.intervalDays.toString()
             dates.clear(); dates.addAll(ScheduleLogic.dates(m))
             times.clear(); times.addAll(m.times.split(",").filter { it.isNotBlank() })
             dose = m.doseAmount; start = m.startDate; durType = m.durationType
@@ -215,6 +217,7 @@ private val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OptionRow("Every day", d.sched == "DAILY") { d.sched = "DAILY" }
         OptionRow("On specific days of the week", d.sched == "WEEKDAYS") { d.sched = "WEEKDAYS" }
+        OptionRow("Alternate days / every few days", d.sched == "INTERVAL") { d.sched = "INTERVAL" }
         OptionRow("On specific dates", d.sched == "DATES") { d.sched = "DATES" }
         OptionRow("As needed (no reminders)", d.sched == "AS_NEEDED") { d.sched = "AS_NEEDED" }
     }
@@ -229,9 +232,22 @@ private val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                 }
             }
         }
+        "INTERVAL" -> {
+            Txt("Repeat every", T.b2, modifier = Modifier.padding(bottom = 8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(2, 3, 4, 5, 7).forEach { n ->
+                    Chip(if (n == 2) "2 days (alternate)" else "$n days", d.interval == n.toString()) { d.interval = n.toString() }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Field(d.interval, { d.interval = it.filter(Char::isDigit) }, "Number of days between doses", number = true)
+            val n = d.interval.toIntOrNull() ?: 0
+            if (n >= 2) Txt("Doses on: " + (0..4).joinToString(", ") { Fmt.date(LocalDate.ofEpochDay(d.start + it * n)) } + " \u2026",
+                T.c1, PT.Grey, Modifier.padding(top = 8.dp))
+        }
         "DATES" -> MultiDates(d.dates)
     }
-    if (d.sched == "DAILY" || d.sched == "WEEKDAYS") { Spacer(Modifier.height(16.dp)); DateRow("Start date", d.start) { d.start = it } }
+    if (d.sched == "DAILY" || d.sched == "WEEKDAYS" || d.sched == "INTERVAL") { Spacer(Modifier.height(16.dp)); DateRow("Start date", d.start) { d.start = it } }
 }
 
 @Composable private fun StepTimes(d: Draft, h24: Boolean) {

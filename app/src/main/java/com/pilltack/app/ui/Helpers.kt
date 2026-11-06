@@ -41,6 +41,7 @@ fun freqText(m: Medicine, h24: Boolean): String {
     val base = when (m.scheduleType) {
         "DAILY" -> "Every day"
         "WEEKDAYS" -> dayNames.filterIndexed { i, _ -> ((m.weekdays shr i) and 1) == 1 }.joinToString(", ")
+        "INTERVAL" -> if (m.intervalDays == 2) "Every other day" else "Every ${m.intervalDays} days"
         "DATES" -> "${ScheduleLogic.dates(m).size} selected date(s)"
         else -> "As needed"
     }
