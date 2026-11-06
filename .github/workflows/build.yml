@@ -1,0 +1,27 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.9" }
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle assembleDebug --stacktrace --no-daemon 2>&1 | tee build.log
+      - name: Show the errors (copy these)
+        if: failure()
+        run: |
+          grep -nE "^e: |error:|What went wrong|Could not |FAILED" -A3 build.log | head -80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: build-log, path: build.log }
+      - uses: actions/upload-artifact@v4
+        with: { name: PillTack-debug-apk, path: app/build/outputs/apk/debug/*.apk }
