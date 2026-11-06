@@ -128,7 +128,7 @@ fun AddScreen(nav: NavHostController, repo: Repo, medId: Long) {
         "Choose Colours", "How often?", "When will you take this?", "How long?", "Review Details")
 
     Column(Modifier.fillMaxSize()) {
-        BackBar(::back) { nav.popBackStack() }
+        BackBar({ back() }, { nav.popBackStack() })
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             if (step in 1..7) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
