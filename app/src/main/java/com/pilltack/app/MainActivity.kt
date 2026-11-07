@@ -13,7 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.pilltack.app.ui.AppRoot
-import com.pilltack.app.ui.PillTackTheme
+import com.pilltack.app.ui.PillTrackTheme
 
 class MainActivity : ComponentActivity() {
     private val askNotif = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) askNotif.launch(Manifest.permission.POST_NOTIFICATIONS)
         setContent {
-            PillTackTheme {
+            PillTrackTheme {
                 Surface(Modifier.fillMaxSize(), color = Color.White) {
                     LaunchedEffect(Unit) { repo.sweep() }
                     AppRoot(repo)

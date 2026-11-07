@@ -3,14 +3,17 @@ package com.pilltack.app.data
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import com.pilltack.app.notify.Reminders
+import com.pilltack.app.widget.NextDoseWidget
 import kotlinx.coroutines.flow.*
 import java.time.LocalDate
 import java.time.ZoneId
 
 val Context.store by preferencesDataStore("settings")
 
-data class Prefs(val snooze: Int = 10, val h24: Boolean = false, val notif: Boolean = true, val onboarded: Boolean = false)
+data class Prefs(val snooze: Int = 10, val h24: Boolean = false, val notif: Boolean = true, val onboarded: Boolean = false, val alarm: Boolean = true)
 
 class Repo(private val ctx: Context, db: AppDb) {
     private val md = db.meds()
@@ -22,18 +25,20 @@ class Repo(private val ctx: Context, db: AppDb) {
         val H24 = booleanPreferencesKey("h24")
         val NOTIF = booleanPreferencesKey("notif")
         val ONB = booleanPreferencesKey("onboarded")
+        val ALARM = booleanPreferencesKey("alarm")
         const val GRACE = 60 * 60_000L   // a dose not acted on for 1h becomes MISSED
     }
 
     val medicines: Flow<List<Medicine>> = md.all()
     val doses: Flow<List<Dose>> = dd.allFlow()
     val prefs: Flow<Prefs> = ctx.store.data.map {
-        Prefs(it[SNOOZE] ?: 10, it[H24] ?: false, it[NOTIF] ?: true, it[ONB] ?: false)
+        Prefs(it[SNOOZE] ?: 10, it[H24] ?: false, it[NOTIF] ?: true, it[ONB] ?: false, it[ALARM] ?: true)
     }
 
     suspend fun prefsNow(): Prefs = prefs.first()
     suspend fun setSnooze(v: Int) { ctx.store.edit { it[SNOOZE] = v } }
-    suspend fun setH24(v: Boolean) { ctx.store.edit { it[H24] = v } }
+    suspend fun setH24(v: Boolean) { ctx.store.edit { it[H24] = v }; updateWidget() }
+    suspend fun setAlarm(v: Boolean) { ctx.store.edit { it[ALARM] = v } }
     suspend fun setNotif(v: Boolean) { ctx.store.edit { it[NOTIF] = v } }
     suspend fun setOnboarded() { ctx.store.edit { it[ONB] = true } }
 
@@ -49,7 +54,7 @@ class Repo(private val ctx: Context, db: AppDb) {
         return id
     }
 
-    suspend fun delete(m: Medicine) { Reminders.cancel(ctx, m.id); md.delete(m) }
+    suspend fun delete(m: Medicine) { Reminders.cancel(ctx, m.id); md.delete(m); updateWidget() }
 
     suspend fun setStatus(m: Medicine, status: String) {
         md.update(m.copy(status = status)); refresh(m.id)
@@ -88,6 +93,7 @@ class Repo(private val ctx: Context, db: AppDb) {
             if (m.refillAt >= 0 && left <= m.refillAt) Reminders.refillNotice(ctx, m.copy(pillsLeft = left))
         }
         refresh(m.id)
+        updateWidget()
     }
 
     suspend fun markOccurrence(m: Medicine, at: Long, status: String) {
@@ -109,6 +115,11 @@ class Repo(private val ctx: Context, db: AppDb) {
 
     /** Compute the next dose and set ONE alarm for this medicine (same request code => no duplicates). */
     suspend fun refresh(id: Long, after: Long = System.currentTimeMillis()) {
+        refreshAlarm(id, after)
+        updateWidget()
+    }
+
+    private suspend fun refreshAlarm(id: Long, after: Long) {
         val m = md.get(id)
         if (m == null || m.status != "ACTIVE") { Reminders.cancel(ctx, id); return }
         val nxt = ScheduleLogic.next(m, after, dd.countFor(id, m.activeFrom), zone)
@@ -152,5 +163,31 @@ class Repo(private val ctx: Context, db: AppDb) {
                 .append(if (it.actualAt > 0) f.format(java.time.Instant.ofEpochMilli(it.actualAt).atZone(zone)) else "").append('\n')
         }
         return sb.toString()
+    }
+
+    /** Earliest upcoming dose across all active medicines. */
+    suspend fun nextOverall(): Pair<Medicine, Long>? {
+        val now = System.currentTimeMillis()
+        return md.allNow().mapNotNull { m ->
+            ScheduleLogic.next(m, now, dd.countFor(m.id, m.activeFrom), zone)?.let { m to it }
+        }.minByOrNull { it.second }
+    }
+
+    /** Redraw every placed home-screen widget with the next dose (or "Due now" if one is waiting). */
+    suspend fun updateWidget() {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        val ids = mgr.getAppWidgetIds(ComponentName(ctx, NextDoseWidget::class.java))
+        if (ids.isEmpty()) return
+        val h24 = prefsNow().h24
+        val pending = dd.firstPending()
+        val nxt = nextOverall()
+        val dayFmt = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.getDefault())
+        val (name, whenText) = when {
+            pending != null -> pending.medName to "Due now \u00B7 " + Fmt.time(pending.scheduledAt, h24)
+            nxt != null -> nxt.first.name to
+                dayFmt.format(java.time.Instant.ofEpochMilli(nxt.second).atZone(zone)) + ", " + Fmt.time(nxt.second, h24)
+            else -> "No upcoming dose" to "Tap to add a medicine"
+        }
+        ids.forEach { mgr.updateAppWidget(it, NextDoseWidget.views(ctx, name, whenText)) }
     }
 }

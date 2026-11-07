@@ -30,4 +30,4 @@ jobs:
         if: always()
         with: { name: build-log, path: build.log }
       - uses: actions/upload-artifact@v4
-        with: { name: PillTack-debug-apk, path: app/build/outputs/apk/debug/*.apk }
+        with: { name: PillTrack-debug-apk, path: app/build/outputs/apk/debug/*.apk }

@@ -30,7 +30,7 @@ fun SplashScreen(nav: NavHostController, repo: Repo) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PillGlyph(0, Color(0xFF6FA8F5), Color(0xFFE3E6EA), Color.Transparent, 44.dp)
             Spacer(Modifier.width(8.dp))
-            Txt("PillTack", T.h1, Color.White)
+            Txt("PillTrack", T.h1, Color.White)
         }
     }
 }
@@ -39,7 +39,7 @@ fun SplashScreen(nav: NavHostController, repo: Repo) {
 fun OnboardingScreen(nav: NavHostController, repo: Repo) {
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().background(PT.Blue).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(24.dp)); Row { Txt("PillTack", T.b1, Color.White) }
+        Spacer(Modifier.height(24.dp)); Row { Txt("PillTrack", T.b1, Color.White) }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PillGlyph(0, Color(0xFFE5383B), Color.White, Color(0xFFF5A623), 76.dp)

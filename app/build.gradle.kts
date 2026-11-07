@@ -11,9 +11,9 @@ android {
         applicationId = "com.pilltack.app"
         minSdk = 26
         targetSdk = 34
-        // Must increase on every build for Android to accept it as an update. CI run number does that automatically.
-        versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1) + 1
-        versionName = "1.1"
+        // Minutes since 1970: grows with every build, so Android always sees an upgrade (never a downgrade).
+        versionCode = (System.currentTimeMillis() / 60000L).toInt()
+        versionName = "1.2"
     }
     // Same key on every build => each new APK installs as an update and keeps your data.
     signingConfigs {

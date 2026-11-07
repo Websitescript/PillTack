@@ -64,6 +64,7 @@ interface DoseDao {
     @Query("SELECT COUNT(*) FROM doses WHERE medicineId = :mid AND scheduledAt >= :from") suspend fun countFor(mid: Long, from: Long): Int
     @Query("SELECT COUNT(*) FROM doses WHERE medicineId = :mid AND status = 'PENDING'") suspend fun pendingFor(mid: Long): Int
     @Query("SELECT * FROM doses WHERE status = 'PENDING' AND scheduledAt < :before") suspend fun stalePending(before: Long): List<Dose>
+    @Query("SELECT * FROM doses WHERE status = 'PENDING' ORDER BY scheduledAt LIMIT 1") suspend fun firstPending(): Dose?
     @Query("SELECT * FROM doses ORDER BY scheduledAt DESC") fun allFlow(): Flow<List<Dose>>
     @Query("SELECT * FROM doses ORDER BY scheduledAt") suspend fun allNow(): List<Dose>
     @Query("DELETE FROM doses") suspend fun clear()

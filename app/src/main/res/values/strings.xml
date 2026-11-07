@@ -1,4 +1,5 @@
 <resources>
-    <!-- Single place for the brand name. The Behance screens read "PillTrack"; change here if needed. -->
-    <string name="app_name">PillTack</string>
+    <!-- Single place for the brand name. -->
+    <string name="app_name">PillTrack</string>
+    <string name="widget_desc">Shows your next medicine, date and time</string>
 </resources>

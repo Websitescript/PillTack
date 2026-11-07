@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.PillTack" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.PillTrack" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>

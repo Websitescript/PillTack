@@ -139,6 +139,7 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
     }
     val sysNotif = remember(tick) { NotificationManagerCompat.from(ctx).areNotificationsEnabled() }
     val exact = remember(tick) { Build.VERSION.SDK_INT < 31 || ctx.getSystemService(AlarmManager::class.java).canScheduleExactAlarms() }
+    val fullScreen = remember(tick) { com.pilltack.app.notify.Reminders.canFullScreen(ctx) }
     val battery = remember(tick) { ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName) }
 
     @Composable fun status(title: String, ok: Boolean, why: String, button: String, onClick: () -> Unit) {
@@ -158,7 +159,7 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
             Txt("Settings", T.h1)
             Txt("Reminder reliability", T.b1)
             status("Notifications", sysNotif,
-                if (sysNotif) "Android is allowed to show PillTack reminders." else "Reminders are blocked by Android. You will not see or hear any alerts until you allow notifications.",
+                if (sysNotif) "Android is allowed to show PillTrack reminders." else "Reminders are blocked by Android. You will not see or hear any alerts until you allow notifications.",
                 "Open notification settings") {
                 ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
             }
@@ -168,9 +169,14 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
                 ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${ctx.packageName}")))
             }
             status("Battery optimisation", battery,
-                if (battery) "PillTack is not restricted in the background." else "Battery saving can delay or block alarms. Set PillTack to Unrestricted / Don't optimise.",
+                if (battery) "PillTrack is not restricted in the background." else "Battery saving can delay or block alarms. Set PillTrack to Unrestricted / Don't optimise.",
                 "Open battery settings") { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
-            Txt("On some phones (Realme/Oppo, Xiaomi, Vivo, Samsung) also enable Auto-launch / Allow background activity for PillTack in the phone's app settings, and don't swipe it out of a \u201Cclean up\u201D list. Android and phone makers can still delay alarms, so reminders can't be guaranteed.",
+            if (prefs.alarm) status("Full-screen alarm screen", fullScreen,
+                if (fullScreen) "The call-style screen can open over the lock screen." else "Android is blocking the full-screen alarm. You will still get the ringing notification, but not the call-style screen.",
+                "Allow full-screen alerts") {
+                if (Build.VERSION.SDK_INT >= 34) ctx.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${ctx.packageName}")))
+            }
+            Txt("On some phones (Realme/Oppo, Xiaomi, Vivo, Samsung) also enable Auto-launch, Allow background activity, Show on lock screen and Floating notifications for PillTrack in the phone's app settings, and don't swipe it out of a \u201Cclean up\u201D list. Android and phone makers can still delay alarms, so reminders can't be guaranteed.",
                 T.c2, PT.Grey)
 
             Txt("Preferences", T.b1, modifier = Modifier.padding(top = 8.dp))
@@ -178,6 +184,18 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
                 Txt("Show reminder notifications", T.b3, modifier = Modifier.weight(1f))
                 Switch(prefs.notif, { scope.launch { repo.setNotif(it) } },
                     colors = SwitchDefaults.colors(checkedTrackColor = PT.Green, checkedThumbColor = Color.White))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Txt("Alarm / call-style reminder", T.b3)
+                    Txt("Rings like an alarm and opens a full-screen Taken / Snooze / Skip screen. Turn off for a normal notification.", T.c2, PT.Grey)
+                }
+                Switch(prefs.alarm, { scope.launch { repo.setAlarm(it) } },
+                    colors = SwitchDefaults.colors(checkedTrackColor = PT.Green, checkedThumbColor = Color.White))
+            }
+            SoftButton("Test the reminder in 10 seconds") {
+                com.pilltack.app.notify.Reminders.scheduleTest(ctx)
+                android.widget.Toast.makeText(ctx, "Test reminder in 10 seconds. Lock your phone to see the full-screen screen.", android.widget.Toast.LENGTH_LONG).show()
             }
             Txt("Default snooze", T.b3)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -194,11 +212,11 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
                 scope.launch {
                     val csv = repo.csv()
                     ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(Intent.EXTRA_SUBJECT, "PillTack history").putExtra(Intent.EXTRA_TEXT, csv), "Export history"))
+                        .putExtra(Intent.EXTRA_SUBJECT, "PillTrack history").putExtra(Intent.EXTRA_TEXT, csv), "Export history"))
                 }
             }
             SoftButton("Clear medication history") { confirmClear = true }
-            SoftButton("About PillTack") { about = true }
+            SoftButton("About PillTrack") { about = true }
         }
     }
     if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false }, containerColor = Color.White,
@@ -207,7 +225,7 @@ fun SettingsScreen(nav: NavHostController, repo: Repo) {
         confirmButton = { TextButton({ scope.launch { repo.clearHistory() }; confirmClear = false }) { Text("Clear", color = PT.Red) } },
         dismissButton = { TextButton({ confirmClear = false }) { Text("Keep") } })
     if (about) AlertDialog(onDismissRequest = { about = false }, containerColor = Color.White,
-        title = { Txt("PillTack", T.h2) },
+        title = { Txt("PillTrack", T.h2) },
         text = { Txt("Medication reminders that work offline. Your data stays on this phone.\nVersion 1.0", T.b3) },
         confirmButton = { TextButton({ about = false }) { Text("OK") } })
 }

@@ -8,7 +8,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/** Colours sampled from the PillTack Behance palette. Link/green/red are estimated from the high-fidelity screens. */
+/** Colours sampled from the PillTrack Behance palette. Link/green/red are estimated from the high-fidelity screens. */
 object PT {
     val Blue = Color(0xFF164F7A)
     val Ink = Color(0xFF242424)
@@ -32,7 +32,7 @@ object T {
 }
 
 @Composable
-fun PillTackTheme(content: @Composable () -> Unit) {
+fun PillTrackTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = PT.Blue, onPrimary = Color.White, background = Color.White, surface = Color.White,

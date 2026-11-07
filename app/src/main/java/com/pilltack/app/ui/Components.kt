@@ -101,7 +101,7 @@ fun Logo(color: Color = PT.Blue) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         PillGlyph(0, Color(0xFF6FA8F5), Color(0xFFE3E6EA), Color.Transparent, 26.dp)
         Spacer(Modifier.width(4.dp))
-        Txt("PillTack", T.b1, color)
+        Txt("PillTrack", T.b1, color)
     }
 }
 

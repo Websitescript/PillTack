@@ -24,7 +24,7 @@ class ReminderReceiver : BroadcastReceiver() {
                         if (m != null && m.status == "ACTIVE") {
                             val d = repo.ensureDose(m, at)
                             val p = repo.prefsNow()
-                            if (d.status == "PENDING" && p.notif) Reminders.show(ctx, m, d, p.snooze, p.h24)
+                            if (d.status == "PENDING" && p.notif) Reminders.show(ctx, m, d, p.snooze, p.h24, p.alarm)
                         }
                         repo.refresh(id, maxOf(at, System.currentTimeMillis()))
                     }
@@ -32,11 +32,12 @@ class ReminderReceiver : BroadcastReceiver() {
                         val d = repo.getDose(dose)
                         val m = d?.let { repo.getMed(it.medicineId) }
                         val p = repo.prefsNow()
-                        if (d != null && m != null && d.status == "PENDING" && p.notif) Reminders.show(ctx, m, d, p.snooze, p.h24)
+                        if (d != null && m != null && d.status == "PENDING" && p.notif) Reminders.show(ctx, m, d, p.snooze, p.h24, p.alarm)
                     }
-                    Reminders.TAKEN -> repo.mark(dose, "TAKEN")
-                    Reminders.SKIP -> repo.mark(dose, "SKIPPED")
-                    Reminders.SNOOZE -> repo.snooze(dose, repo.prefsNow().snooze)
+                    Reminders.TAKEN -> { Reminders.dismiss(ctx, dose); repo.mark(dose, "TAKEN") }
+                    Reminders.SKIP -> { Reminders.dismiss(ctx, dose); repo.mark(dose, "SKIPPED") }
+                    Reminders.SNOOZE -> { Reminders.dismiss(ctx, dose); repo.snooze(dose, repo.prefsNow().snooze) }
+                    Reminders.TEST_FIRE -> { val p = repo.prefsNow(); Reminders.showTest(ctx, p.snooze, p.alarm) }
                     else -> repo.sweep()   // boot, time/zone change, app update, exact-alarm permission change
                 }
             } finally {
